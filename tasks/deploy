@@ -1,0 +1,10 @@
+echo Deploying...
+
+for dir in build deploy; do
+  if [[ ! -d "$dir" ]]; then
+    mkdir "$dir"
+  fi
+done
+
+echo The following files were deployed as ${BUILD_NUMBER-$VERSION} > build/deploy.log
+ls -la deploy >> build/deploy.log

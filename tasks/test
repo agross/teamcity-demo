@@ -1,0 +1,5 @@
+echo Running unit tests...
+
+# Harvested artifacts do not have the executable bit.
+chmod +x ./build/tests/unit-tests
+./build/tests/unit-tests

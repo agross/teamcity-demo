@@ -1,0 +1,6 @@
+echo Passing artifacts to TeamCity...
+
+printf "##teamcity[publishArtifacts 'build/bin/** => binaries.zip']\n"
+
+printf "##teamcity[publishArtifacts 'build/tests/unit-tests => tests']\n"
+printf "##teamcity[publishArtifacts 'build/tests/integration-tests => tests']\n"

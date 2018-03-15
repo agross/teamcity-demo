@@ -1,0 +1,13 @@
+VERSION="$(cat VERSION)"
+
+if teamcity; then
+  VERSION="$VERSION-build.$BUILD_NUMBER.sha.${BUILD_VCS_NUMBER:0:7}"
+else
+  VERSION="$VERSION-dev"
+fi
+
+if teamcity; then
+  printf "##teamcity[buildNumber '%s']\n" "$VERSION"
+fi
+
+printf 'The build number is: %s\n' "$VERSION"

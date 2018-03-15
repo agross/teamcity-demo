@@ -1,0 +1,5 @@
+echo Running integration tests...
+
+# Harvested artifacts do not have the executable bit.
+chmod +x ./build/tests/integration-tests
+./build/tests/integration-tests

@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+
+# Fake build script.
+#
+# The script supports running tasks from the tasks directory:
+#
+# ./run-me [task...], e.g. ./run-me compile test
+#
+# The compile task creates:
+# * a binary under build/bin/binary (with four libraries that get loaded)
+# * unit tests
+# * integration tests
+#
+# You can control what the compile task generates by setting the following
+# environment variables:
+#
+# UNIT_TESTS: number of unit tests, 10 by default
+# UNIT_TEST_FAILURE: if nonempty, one unit test will fail
+# INTEGRATION_TESTS: number of integration tests per {browser,slow,database}
+#                    category, 5 by default
+# INTEGRATION_TEST_FAILURE: if nonempty, one integration test per category will
+#                           fail
+# TEST_FILTER: category of integration tests to run {browser,slow,database}
+# BUILD_NUMBER: used as input to the build metadata for the generated version
+# BUILD_VCS_NUMBER: used as input to the SHA metadata for the generated version
+
+set -e
+
+teamcity() {
+  [[ -n "$TEAMCITY_PROJECT_NAME" ]]
+}
+
+block_start() {
+  if teamcity; then
+    printf "##teamcity[blockOpened name='%s']\n" "$1"
+  else
+    printf '[%s]\n' "$1"
+  fi
+}
+
+block_end() {
+  if teamcity; then
+    printf "##teamcity[blockClosed name='%s']\n" "$1"
+  fi
+}
+
+problem() {
+  if teamcity; then
+    printf "##teamcity[buildProblem description='%s']\n" "$1"
+  else
+    printf '%s\n' "$1" >&2
+  fi
+}
+
+for task in "$@"; do
+  file="tasks/$task"
+  if [[ ! -f "$file" ]]; then
+    problem "$(printf 'Task not found: %s' "$task")"
+    exit 1
+  fi
+
+  block_start "$task"
+  source "$file"
+  block_end "$task"
+done

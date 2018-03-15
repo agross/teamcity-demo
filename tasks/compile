@@ -1,0 +1,89 @@
+echo Compiling...
+if teamcity; then
+  sleep 5
+fi
+
+# Generate binary and libs.
+if [[ ! -d build/bin ]]; then
+  mkdir -p build/bin
+fi
+
+cat <<BINARY > build/bin/binary
+#!/usr/bin/env bash
+# Load libraries
+for lib in \${0%/*}/lib-*; do
+  source "\$lib"
+done
+
+echo Hello, I am the the binary at version $VERSION
+BINARY
+chmod +x build/bin/binary
+
+for ((n=0; n<4; n++)); do
+  cat <<LIB > "build/bin/lib-$n"
+echo Loading library $n
+LIB
+done
+
+# Generate unit test binary.
+if [[ ! -d build/tests ]]; then
+  mkdir -p build/tests
+fi
+
+unit_tests="${UNIT_TESTS-10}"
+
+echo '#!/usr/bin/env bash' > build/tests/unit-tests
+for ((n=0; n<unit_tests; n++)); do
+  cat <<TEST >> build/tests/unit-tests
+echo "##teamcity[testStarted name='unit.test-$n']"
+TEST
+
+  if [[ -n "$UNIT_TEST_FAILURE" && "$n" == $((unit_tests / 2)) ]]; then
+    # Failing test.
+    cat <<TEST >> build/tests/unit-tests
+echo "##teamcity[testFailed name='unit.test-$n' message='error executing test $n' details='you set UNIT_TEST_FAILURE, hence the middle test fails']"
+TEST
+
+  cat <<TEST >> build/tests/unit-tests
+echo "##teamcity[testFinished name='unit.test-$n']"
+TEST
+  fi
+done
+
+if [[ -n "$UNIT_TEST_FAILURE" ]]; then
+  echo 'exit 1' >> build/tests/unit-tests
+fi
+chmod +x build/tests/unit-tests
+
+# Generate integration test binaries.
+integration_tests="${INTEGRATION_TESTS-5}"
+
+echo '#!/usr/bin/env bash' > build/tests/integration-tests
+for type in browser slow database; do
+  echo "if [[ -z \"\$TEST_FILTER\" || \"\$TEST_FILTER\" == *$type* ]]; then" >> build/tests/integration-tests
+
+  for ((n=0; n<integration_tests; n++)); do
+    cat <<TEST >> build/tests/integration-tests
+  echo "##teamcity[testStarted name='integration.$type.test-$n']"
+  sleep 3s
+TEST
+
+    if [[ -n "$INTEGRATION_TEST_FAILURE" && "$n" == $((integration_tests / 2)) ]]; then
+      # Failing test.
+      cat <<TEST >> build/tests/integration-tests
+  echo "##teamcity[testFailed name='integration.$type.test-$n' message='error executing integration test $n' details='you set INTEGRATION_TEST_FAILURE, hence the middle test fails']"
+TEST
+    fi
+
+    cat <<TEST >> build/tests/integration-tests
+  echo "##teamcity[testFinished name='integration.$type.test-$n']"
+TEST
+  done
+
+  echo 'fi' >> build/tests/integration-tests
+done
+
+if [[ -n "$INTEGRATION_TEST_FAILURE" ]]; then
+  echo 'exit 1' >> build/tests/integration-tests
+fi
+chmod +x build/tests/integration-tests
